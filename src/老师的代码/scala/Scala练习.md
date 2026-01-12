@@ -127,7 +127,30 @@
 * 统计每个学生的总分 [学号,学生姓名,学生年龄,总分]
 
   ```scala
-  
+  var ScoList = ScoreList
+    .map(Score => {
+      val SplitList = Score.split(",")
+      val Split_1 = SplitList(0)
+      val Split_2 = SplitList(2).toDouble
+      (Split_1,Split_2)
+    })
+    .groupBy(score=>score._1)
+    .map(score=>{
+      val id = score._1
+      val Score = score._2.map(ss=>ss._2)
+      val sum = Score.sum
+      (id,sum)
+    })
+
+  StuList
+    .map(stu=>{
+      val Splits = stu.split(",")
+      val id = Splits(0)
+      val name = Splits(1)
+      val gender = Splits(2)
+      val sumScore = ScoList.getOrElse(id,0)
+      (id,name,gender,sumScore)
+    }).foreach(println)  
   ```
 
 #### 阶段三
