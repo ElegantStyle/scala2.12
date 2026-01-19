@@ -1,7 +1,7 @@
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 
-object GroupByKey {
+object Demo11GroupByKey {
   def main(args: Array[String]): Unit = {
     // 创建spark对象
     val sc = new SparkContext(new SparkConf()
