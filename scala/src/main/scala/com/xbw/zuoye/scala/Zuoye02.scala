@@ -1,6 +1,5 @@
 package com.xbw.zuoye.scala
 
-import scala.collection.mutable.ListBuffer
 import scala.io.Source
 
 object Zuoye02 {

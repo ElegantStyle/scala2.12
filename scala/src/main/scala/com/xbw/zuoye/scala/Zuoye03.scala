@@ -1,7 +1,6 @@
 package com.xbw.zuoye.scala
 
 import scala.io.Source
-import scala.collection.mutable
 
 object Zuoye03 {
   def main(args: Array[String]): Unit = {

@@ -1,5 +1,3 @@
-package scala
-
 object Demo04Func02 {
   /**
    * Scala中的函数可以在哪里定义？

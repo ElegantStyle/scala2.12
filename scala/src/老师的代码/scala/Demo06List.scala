@@ -1,5 +1,3 @@
-package scala
-
 object Demo06List {
   def main(args: Array[String]): Unit = {
     /**

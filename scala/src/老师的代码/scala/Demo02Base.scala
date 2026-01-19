@@ -1,5 +1,3 @@
-package scala
-
 import scala.collection.mutable.ListBuffer
 
 object Demo02Base {

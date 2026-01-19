@@ -1,5 +1,3 @@
-package scala
-
 object Demo03Func01 {
   /**
    * 函数的定义：
