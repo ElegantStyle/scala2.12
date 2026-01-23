@@ -1,6 +1,8 @@
 package com.sql
 
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
+
+import scala.language.postfixOps
 
 object Demo03DSL {
   def main(args: Array[String]): Unit = {
@@ -25,29 +27,29 @@ object Demo03DSL {
       .load("./data/Spark/02_orc")
 
     //1.select
-//    stuDF.select($"id").show()
+    //    stuDF.select($"id").show()
 
     // 2.where条件
     // 筛选出文科四班的女生
-//    stuDF.select("*")
-//      .where($"clazz" === "文科四班" and $"gender"==="女")
-//      .show()
+    //    stuDF.select("*")
+    //      .where($"clazz" === "文科四班" and $"gender"==="女")
+    //      .show()
 
     // 3.groupBy 分组和where的连用
     // 只看文科一班的人数
-//    stuDF.select($"*")
-//      .groupBy($"clazz")
-//      .agg(count("*") as "cnt" )
-//      .where($"clazz"==="文科一班")
-//      .show()
-    // order by 筛选
+    //    stuDF.select($"*")
+    //      .groupBy($"clazz")
+    //      .agg(count("*") as "cnt" )
+    //      .where($"clazz"==="文科一班")
+    //      .show()
+    // order by 筛选 和limit 指定输出多少
     // 按照每个班级人数进行降序,得到班级人数排名前5
-//    stuDF.select($"*")
-//      .groupBy($"clazz")
-//      .agg(count("*") as "cnt")
-//      .orderBy($"cnt".desc)
-//      .limit(5)
-//      .show()
+    //    stuDF.select($"*")
+    //      .groupBy($"clazz")
+    //      .agg(count("*") as "cnt")
+    //      .orderBy($"cnt".desc)
+    //      .limit(5)
+    //      .show()
 
     // union合并
     val stu2DF: DataFrame = spark.read
@@ -56,14 +58,42 @@ object Demo03DSL {
       .load("./data/Spark/02_orc")
 
     // 去重
-    val stuDFco: Long = stuDF.union(stu2DF).describe().count()
-    println(stuDFco)
-    // 不去重
-    val stuDF2co: Long = stuDF.union(stu2DF).count()
-    println(stuDF2co)
+    //    val stuDFco: Long = stuDF.union(stu2DF).distinct().count()
+    //    println(stuDFco)
+    //    // 不去重
+    //    val stuDF2co: Long = stuDF.union(stu2DF).count()
+    //    println(stuDF2co)
 
 
-    // join 和limit在一起用
+    // join
+    val stu2DF1: Dataset[Row] = stu2DF.select("*")
+      .where($"id" notEqual "1500100001")
 
+    val innerCnt: Long = stuDF.select("*")
+      .withColumnRenamed("id", "sid")
+      .join(stu2DF1, $"sid" === $"id")
+      .count()
+    println(innerCnt)
+    val leftCnt: Long = stuDF.select("*")
+      .withColumnRenamed("id", "sid")
+      .join(stu2DF1, $"sid" === $"id", "left")
+      .count()
+    println(leftCnt)
+    val rightCnt: Long = stuDF.select("*")
+      .withColumnRenamed("id", "sid")
+      .join(stu2DF1, $"sid" === $"id", "right")
+      .count()
+    println(rightCnt)
+    val full: Long = stuDF.select("*")
+      .withColumnRenamed("id", "sid")
+      .join(stu2DF1, $"sid" === $"id", "full")
+      .count()
+    println(full)
+
+    // withColumn:增加一列
+    // 增加一个姓氏列
+    stuDF.select("*")
+      .withColumn("last_name", substring($"name", 1, 1))
+      .show()
   }
 }
