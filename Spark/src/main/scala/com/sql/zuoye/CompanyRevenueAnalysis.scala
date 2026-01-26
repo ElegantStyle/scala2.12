@@ -1,98 +1,73 @@
 package com.sql.zuoye
 
-import org.apache.spark.sql.{SparkSession, DataFrame}
+import org.apache.spark.sql.{SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.expressions.Window
 
 object CompanyRevenueAnalysis {
   def main(args: Array[String]): Unit = {
-    // 创建 SparkSession
-    val spark: SparkSession = SparkSession.builder()
+    // 创建 SparkSession 并配置
+    val spark = SparkSession.builder()
       .appName("Company Revenue Analysis")
       .master("local[*]")
+      .config("spark.sql.shuffle.partitions", "2")
       .getOrCreate()
 
     import spark.implicits._
-
-    // 1. 读取 CSV 文件
-    val df = spark.read
+    
+    // 读取CSV并转换为月度收入数据
+    val monthlyDf = spark.read
       .option("header", false)
       .option("inferSchema", true)
-      .option("spark.sql.shuffle.partitions","2")
       .csv("./data/Spark/burks.csv")
+      .select(
+        col("_c0").as("company_code"),
+        col("_c1").as("year"),
+        expr("""stack(12, 1, _c2, 2, _c3, 3, _c4, 4, _c5, 5, _c6, 6, _c7, 
+                7, _c8, 8, _c9, 9, _c10, 10, _c11, 11, _c12, 12, _c13) as (month, monthly_revenue)""")
+      )
+      .withColumn("month", col("month").cast("int"))
 
-    // 2. 重命名列
-    val dfWithNames = df.select(
-      col("_c0").as("company_code"),
-      col("_c1").as("year"),
-      col("_c2").as("tsl01"), col("_c3").as("tsl02"), col("_c4").as("tsl03"),
-      col("_c5").as("tsl04"), col("_c6").as("tsl05"), col("_c7").as("tsl06"),
-      col("_c8").as("tsl07"), col("_c9").as("tsl08"), col("_c10").as("tsl09"),
-      col("_c11").as("tsl10"), col("_c12").as("tsl11"), col("_c13").as("tsl12")
-    )
-
-    val monthlyExpr = """
-      stack(12,
-        1, tsl01, 2, tsl02, 3, tsl03, 4, tsl04,
-        5, tsl05, 6, tsl06, 7, tsl07, 8, tsl08,
-        9, tsl09, 10, tsl10, 11, tsl11, 12, tsl12
-      ) as (month, monthly_revenue)
-    """
-
-    val monthlyDf = dfWithNames.select(
-      col("company_code"),
-      col("year"),
-      expr(monthlyExpr)
-    ).withColumn("month", col("month").cast("int"))
-
-    // 任务1：统计每个公司每年按月累计收入（移除了rowsBetween）
-    val windowSpec1 = Window.partitionBy("company_code", "year")
-      .orderBy("month")
-
-    val result1 = monthlyDf
-      .withColumn("cumulative_revenue",
-        sum("monthly_revenue").over(windowSpec1))
-      .orderBy("company_code", "year", "month")
-
+    // 任务1：每月累计收入
     println("=== 每个公司每年按月累计收入 ===")
-    result1.select(
-      "company_code", "year", "month", "monthly_revenue", "cumulative_revenue"
-    ).show(30, truncate = false)
-
-    // 任务2：统计每个公司当月比上年同期增长率
-    val windowSpec2 = Window.partitionBy("company_code", "month")
-      .orderBy("year")
-
-    val result2 = monthlyDf
-      .withColumn("last_year_monthly_revenue",
-        lag("monthly_revenue", 1).over(windowSpec2))
-      .filter(col("last_year_monthly_revenue").isNotNull)
-      .withColumn("growth_rate",
-        (col("monthly_revenue") / col("last_year_monthly_revenue")) - 1)
+    monthlyDf
+      .withColumn("cumulative_revenue", 
+        sum("monthly_revenue").over(
+          Window.partitionBy("company_code", "year").orderBy("month")
+        )
+      )
       .orderBy("company_code", "year", "month")
+      .select("company_code", "year", "month", "monthly_revenue", "cumulative_revenue")
+      .show(30, truncate = false)
 
+    // 任务2：同比增长率
     println("=== 每个公司当月比上年同期增长率 ===")
-    result2.select(
-      "company_code", "year", "month",
-      "last_year_monthly_revenue", "monthly_revenue", "growth_rate"
-    ).show(30, truncate = false)
-
-    // 计算环比增长率
-    val windowSpec3 = Window.partitionBy("company_code", "year")
-      .orderBy("month")
-
-    val result3 = monthlyDf
-      .withColumn("last_month_revenue",
-        lag("monthly_revenue", 1).over(windowSpec3))
-      .filter(col("last_month_revenue").isNotNull)
-      .withColumn("mom_growth_rate",
-        (col("monthly_revenue") / col("last_month_revenue")) - 1)
+    monthlyDf
+      .withColumn("last_year_revenue", 
+        lag("monthly_revenue", 1).over(
+          Window.partitionBy("company_code", "month").orderBy("year")
+        )
+      )
+      .filter(col("last_year_revenue").isNotNull)
+      .withColumn("growth_rate", (col("monthly_revenue") / col("last_year_revenue")) - 1)
       .orderBy("company_code", "year", "month")
+      .select("company_code", "year", "month", "last_year_revenue", "monthly_revenue", "growth_rate")
+      .show(30, truncate = false)
 
+    // 任务3：环比增长率
     println("=== 环比增长率 ===")
-    result3.select(
-      "company_code", "year", "month",
-      "last_month_revenue", "monthly_revenue", "mom_growth_rate"
-    ).show(20, truncate = false)
+    monthlyDf
+      .withColumn("last_month_revenue", 
+        lag("monthly_revenue", 1).over(
+          Window.partitionBy("company_code", "year").orderBy("month")
+        )
+      )
+      .filter(col("last_month_revenue").isNotNull)
+      .withColumn("mom_growth_rate", (col("monthly_revenue") / col("last_month_revenue")) - 1)
+      .orderBy("company_code", "year", "month")
+      .select("company_code", "year", "month", "last_month_revenue", "monthly_revenue", "mom_growth_rate")
+      .show(20, truncate = false)
+
+    spark.stop()
   }
 }
