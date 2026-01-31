@@ -10,6 +10,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>Spark</module>
+        <module>flink</module>
     </modules>
 
     <properties>

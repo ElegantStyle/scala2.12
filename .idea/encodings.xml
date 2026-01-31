@@ -5,6 +5,8 @@
     <file url="file://$APPLICATION_HOME_DIR$/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Spark/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Spark/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/flink/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/flink/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/scala/spark/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/scala/spark/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/scala/src/main/java" charset="UTF-8" />
