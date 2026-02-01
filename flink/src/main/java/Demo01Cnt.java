@@ -1,31 +1,45 @@
 import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.streaming.api.datastream.DataStreamSource;
+import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.KeyedStream;
-import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
+
 
 public class Demo01Cnt {
     public static void main(String[] args) throws Exception {
         // 创建 flink 环境
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        // 1. 创建数据源：从Socket读取数据
-        DataStreamSource<String> lineDS = env.socketTextStream("master", 8888);
-        // 2. 数据转换处理：分割单词并转换为(word, 1)键值对
-        SingleOutputStreamOperator<Tuple2<String, Integer>> wordOneDS = lineDS.flatMap( (line, out) -> {
-            String[] split = line.split(",");
-            for (String word : split) {
-                out.collect(Tuple2.of(word, 1));
+
+
+        // 设置并行度,默认等于CPU的核数
+        env.setParallelism(2);
+        // Flink 会优化上下数据传输的方式(以32KB作为一批,间隔默认100ms),数据到了下游还是逐条处理
+        env.setBufferTimeout(100);
+
+        // 创建数据源
+        DataStream<String> lineDS = env.socketTextStream("master", 8888);
+
+        // 处理数据源
+        // 使用FlatMap 算子将一行转换多行
+        DataStream<String> splitDS = lineDS.flatMap((FlatMapFunction<String, String>) (s, collector) -> {
+            for (String word : s.split(",")) {
+                collector.collect(word);
             }
         });
-        // 3. 分组：按照单词分组
-        KeyedStream<Tuple2<String, Integer>, String> wordKeyDS = wordOneDS.keyBy(t -> t.f0);
-        // 4. 聚合：计算每个单词出现的次数
-        SingleOutputStreamOperator<Tuple2<String, Integer>> wordCountDS = wordKeyDS.sum(1);
-        // 5. 结果输出
-        wordCountDS.print();
-        // 6. 启动Flink作业
-        env.execute("Flink WordCount Demo");
+
+        // 使用 Map 算子将数据转换成二元组(单词,1)
+        DataStream<Tuple2<String, Integer>> MapDS = splitDS.map((MapFunction<String, Tuple2<String, Integer>>) s -> new Tuple2<>(s, 1));
+        
+        // 使用 keyBy 进行分组
+        KeyedStream<Tuple2<String, Integer>, String> keyByDS = MapDS.keyBy((KeySelector<Tuple2<String, Integer>, String>) stringIntegerTuple2 -> stringIntegerTuple2.f0);
+
+         // 完成单词统计
+        keyByDS.sum(1).print();
+        env.execute();
+
+
     }
 }
