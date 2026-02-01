@@ -13,13 +13,10 @@ public class Demo01Cnt {
         // 1. 创建数据源：从Socket读取数据
         DataStreamSource<String> lineDS = env.socketTextStream("master", 8888);
         // 2. 数据转换处理：分割单词并转换为(word, 1)键值对
-        SingleOutputStreamOperator<Tuple2<String, Integer>> wordOneDS = lineDS.flatMap(new FlatMapFunction<String, Tuple2<String, Integer>>() {
-            @Override
-            public void flatMap(String line, Collector<Tuple2<String, Integer>> out) throws Exception {
-                String[] split = line.split(",");
-                for (String word : split) {
-                    out.collect(Tuple2.of(word, 1));
-                }
+        SingleOutputStreamOperator<Tuple2<String, Integer>> wordOneDS = lineDS.flatMap( (line, out) -> {
+            String[] split = line.split(",");
+            for (String word : split) {
+                out.collect(Tuple2.of(word, 1));
             }
         });
         // 3. 分组：按照单词分组
