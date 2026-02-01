@@ -23,18 +23,31 @@ public class Demo01Cnt {
         DataStream<String> lineDS = env.socketTextStream("master", 8888);
 
         // 处理数据源
-        // 使用FlatMap 算子将一行转换多行
-        DataStream<String> splitDS = lineDS.flatMap((FlatMapFunction<String, String>) (s, collector) -> {
-            for (String word : s.split(",")) {
-                collector.collect(word);
+        // 使用FlatMap 算子将一行转换位多行
+        DataStream<String> splitDS = lineDS.flatMap(new FlatMapFunction<String, String>() {
+            @Override
+            public void flatMap(String s, Collector<String> collector) throws Exception {
+                for (String word : s.split(",")) {
+                    collector.collect(word);
+                }
             }
         });
 
         // 使用 Map 算子将数据转换成二元组(单词,1)
-        DataStream<Tuple2<String, Integer>> MapDS = splitDS.map((MapFunction<String, Tuple2<String, Integer>>) s -> new Tuple2<>(s, 1));
+        DataStream<Tuple2<String, Integer>> MapDS = splitDS.map(new MapFunction<String, Tuple2<String, Integer>>() {
+            @Override
+            public Tuple2<String, Integer> map(String s) throws Exception {
+                return new Tuple2<>(s, 1);
+            }
+        });
         
         // 使用 keyBy 进行分组
-        KeyedStream<Tuple2<String, Integer>, String> keyByDS = MapDS.keyBy((KeySelector<Tuple2<String, Integer>, String>) stringIntegerTuple2 -> stringIntegerTuple2.f0);
+        KeyedStream<Tuple2<String, Integer>, String> keyByDS = MapDS.keyBy(new KeySelector<Tuple2<String, Integer>, String>() {
+            @Override
+            public String getKey(Tuple2<String, Integer> stringIntegerTuple2) throws Exception {
+                return stringIntegerTuple2.f0;
+            }
+        });
 
          // 完成单词统计
         keyByDS.sum(1).print();
