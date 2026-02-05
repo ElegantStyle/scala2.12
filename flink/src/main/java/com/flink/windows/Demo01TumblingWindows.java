@@ -7,6 +7,7 @@ import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
 
@@ -70,7 +71,7 @@ public class Demo01TumblingWindows {
                         WatermarkStrategy.<Tuple3<String, Long, Integer>>forMonotonousTimestamps()
                                 .withTimestampAssigner((event, timestamp) -> event.f1)
                 ).keyBy(0)
-                .window(TumblingProcessingTimeWindows.of(Time.seconds(5)))
+                .window(TumblingEventTimeWindows.of(Time.seconds(5)))
                 .sum(2)
                 .map(line -> line.f0 + "," + line.f2)
                 .print();
