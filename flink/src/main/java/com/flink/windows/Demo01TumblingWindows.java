@@ -16,6 +16,7 @@ public class Demo01TumblingWindows {
         /*
          * 滚动窗口的 assigner 分发元素到指定大小的窗口。滚动窗口的大小是固定的，且各自范围之间不重叠。
          * 比如说，如果你指定了滚动窗口的大小为 5 分钟，那么每 5 分钟就会有一个窗口被计算，且一个新的窗口被创建
+         *
          * */
         // 滚动窗口分为两种
         // 基于处理时间的滚动窗口:TumblingProcessingTimeWindows
